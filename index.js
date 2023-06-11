@@ -57,7 +57,7 @@ async function run() {
         }
         next();
     } 
-
+    
     const verifyInstructor =async(req,res,next)=>{
       const email=req.decoded.email;
       const query = {email:email}
@@ -65,9 +65,10 @@ async function run() {
       if(user?.role !=="instructor"){
         return res.status(403).send({ error: true, message: 'Invalid User' });
       }
+      next();
     }
     
-
+    
     // ----------------------Student-----------------------------
     app.post('/users', async(req, res)=>{
         const body = req.body;
@@ -98,7 +99,7 @@ async function run() {
         res.send(result)
     }) 
 // =-------------------insttructor
-    app.get('/users/instructor/:email',verifyJWT, async(req,res)=>{
+    app.get('/users/instructor/:email',verifyJWT, verifyInstructor, async(req,res)=>{
       const email = req.params.email;
       const query = {email:email}
       const user = await userCollection.findOne(query);
@@ -107,7 +108,27 @@ async function run() {
     })
 
 // ---------------Admin----
+    
+    app.put('/users/admin/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = {_id : new ObjectId(id)}
+      const options = { upsert: true };
+      const UpdateDoc = {
+          $set:{
+              role:"admin"
+          }
+      }
+      const result = await userCollection.updateOne(filter, UpdateDoc, options)
+      res.send(result)
 
+      app.get('/users/admin/:email', verifyJWT, async(req,res)=>{
+        const email = req.params.email;
+        const query ={email:email}
+        const user = await userCollection.findOne(query)
+        const result = {admin: user?.role =='admin'}
+        res.send(result)
+      })
+  }) 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
