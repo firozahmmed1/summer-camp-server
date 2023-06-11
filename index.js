@@ -12,7 +12,6 @@ app.use(express.json())
 
 const verifyJWT =(req,res,next)=>{
    const authorization = req.headers.authorization
-    console.log(authorization)
     if(!authorization){
       return res.status(401).send({error:true, message:"A token is required for authentication"})
     }
@@ -54,11 +53,22 @@ async function run() {
         const query={email:email}
         const user = await userCollection.findOne(query)
         if(user.role !== "student"){
-          return res.status(403).send({ error: true, message: 'forbidden message' });
+          return res.status(403).send({ error: true, message: 'Invalid User' });
         }
         next();
     } 
+
+    const verifyInstructor =async(req,res,next)=>{
+      const email=req.decoded.email;
+      const query = {email:email}
+      const user = await userCollection.findOne(query)
+      if(user?.role !=="instructor"){
+        return res.status(403).send({ error: true, message: 'Invalid User' });
+      }
+    }
     
+
+    // ----------------------Student-----------------------------
     app.post('/users', async(req, res)=>{
         const body = req.body;
         const query = {email : body.email};
@@ -86,7 +96,17 @@ async function run() {
         }
         const result = await userCollection.updateOne(filter, UpdateDoc, options)
         res.send(result)
+    }) 
+// =-------------------insttructor
+    app.get('/users/instructor/:email',verifyJWT, async(req,res)=>{
+      const email = req.params.email;
+      const query = {email:email}
+      const user = await userCollection.findOne(query);
+      const result = {instructor:user?.role=='instructor'}
+      res.send(result)
     })
+
+// ---------------Admin----
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
