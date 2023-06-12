@@ -16,6 +16,7 @@ const verifyJWT =(req,res,next)=>{
       return res.status(401).send({error:true, message:"A token is required for authentication"})
     }
     const token = authorization.split(' ')[1]
+    // console.log({token})
     jwt.verify(token,process.env.ACCESS_SECRET_TOKEN, (error, decoded)=>{
       if(error){
         return res.status(401).send({error:true, message:"Invalid Token"})
@@ -62,7 +63,20 @@ async function run() {
       const email=req.decoded.email;
       const query = {email:email}
       const user = await userCollection.findOne(query)
+      // console.log(user)
       if(user?.role !=="instructor"){
+        return res.status(403).send({ error: true, message: 'Invalid User' });
+      }
+      next();
+    }
+    
+
+    const verifyAdmin =async(req,res,next)=>{
+      const email=req.decoded.email;
+      const query = {email:email}
+      const user = await userCollection.findOne(query)
+      // console.log(user)
+      if(user?.role !=="admin"){
         return res.status(403).send({ error: true, message: 'Invalid User' });
       }
       next();
@@ -103,7 +117,7 @@ async function run() {
       const email = req.params.email;
       const query = {email:email}
       const user = await userCollection.findOne(query);
-      const result = {instructor:user?.role=='instructor'}
+      const result = {instructor:user?.role==='instructor'}
       res.send(result)
     })
 
@@ -120,15 +134,14 @@ async function run() {
       }
       const result = await userCollection.updateOne(filter, UpdateDoc, options)
       res.send(result)
-
-      app.get('/users/admin/:email', verifyJWT, async(req,res)=>{
-        const email = req.params.email;
-        const query ={email:email}
-        const user = await userCollection.findOne(query)
-        const result = {admin: user?.role =='admin'}
-        res.send(result)
-      })
   }) 
+  app.get('/users/admin/:email',verifyJWT,verifyAdmin, async(req,res)=>{
+    const email = req.params.email;
+    const query ={email:email}
+    const user = await userCollection.findOne(query)
+    const result = {admin: user?.role ==='admin'}
+    res.send(result)
+  })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
