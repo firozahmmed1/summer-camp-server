@@ -156,7 +156,42 @@ async function run() {
     const user = await userCollection.findOne(query)
     const result = {admin: user?.role ==='admin'}
     res.send(result)
+  }) 
+  
+  app.get('/classes/admindata',verifyJWT,verifyAdmin, async(req,res)=>{
+     const result =await classesCollection.find().toArray()
+     res.send(result)
   })
+
+  app.put('/classes/updatedata/:id',verifyJWT,verifyAdmin, async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id :new ObjectId(id)} 
+      const user= req.body;
+      const options = { upsert: true };
+      const doc={
+        $set:{
+          status:user.status
+        }
+      }
+      const result =await classesCollection.updateOne(query,doc,options)
+      res.send(result)
+  }) 
+
+app.put('/classes/adminmodal/:id',verifyJWT,verifyAdmin, async(req,res)=>{
+    const id=req.params.id;
+    const user=req.body;
+    const query = {_id : new ObjectId(id)}
+    const options = { upsert: true };
+    const doc ={
+      $set:{
+        feedback:user.feedback
+      }
+    }
+    const result = await classesCollection.updateOne(query, doc, options)
+    res.send(result)
+})
+
+app
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
