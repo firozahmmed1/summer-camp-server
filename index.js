@@ -43,6 +43,11 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     const userCollection=client.db('artsCraft').collection('users');
+    const classesCollection=client.db('artsCraft').collection('classes');
+   
+   
+   
+   
     app.post('/jwt', (req, res)=>{
       const user = req.body
       const token = jwt.sign(user, process.env.ACCESS_SECRET_TOKEN, { expiresIn: '1h'})
@@ -121,6 +126,16 @@ async function run() {
       res.send(result)
     })
 
+   app.post('/classes', async(req,res)=>{
+      const claseseData = req.body;
+      const result = await classesCollection.insertOne(claseseData);
+      res.send(result)
+   }) 
+
+  app.get('/classes', verifyJWT, verifyInstructor, async(req,res)=>{
+    const resutl = await classesCollection.find().toArray()
+    res.send(resutl)
+  })
 // ---------------Admin----
     
     app.put('/users/admin/:id', async(req,res)=>{
