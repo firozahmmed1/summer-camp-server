@@ -126,6 +126,16 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/users/insalldata', async(req,res)=>{
+      const result = await userCollection.find().toArray()
+      res.send(result)
+    })
+    
+    app.get('/users/inslimit', async(req,res)=>{
+      const result = await userCollection.find().toArray()
+      res.send(result)
+    })
+
    app.post('/classes', async(req,res)=>{
       const claseseData = req.body;
       const result = await classesCollection.insertOne(claseseData);
