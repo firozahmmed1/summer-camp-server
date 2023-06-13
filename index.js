@@ -104,7 +104,7 @@ async function run() {
         const result = await userCollection.find().toArray();
         res.send(result)
     })
-
+//-------------------insttructor
     app.put('/users/:id', async(req,res)=>{
         const id = req.params.id;
         const filter = {_id : new ObjectId(id)}
@@ -117,7 +117,7 @@ async function run() {
         const result = await userCollection.updateOne(filter, UpdateDoc, options)
         res.send(result)
     }) 
-// =-------------------insttructor
+
     app.get('/users/instructor/:email',verifyJWT, verifyInstructor, async(req,res)=>{
       const email = req.params.email;
       const query = {email:email}
@@ -133,12 +133,20 @@ async function run() {
    }) 
 
   app.get('/classes', verifyJWT, verifyInstructor, async(req,res)=>{
-    const resutl = await classesCollection.find().toArray()
+     const email = req.decoded.email;
+     const query ={Instructor_email:email}
+    const resutl = await classesCollection.find(query).sort({_id:-1}).toArray()
     res.send(resutl)
   })
 // ---------------Admin----
-    
-    app.put('/users/admin/:id', async(req,res)=>{
+
+app.get('/users/alldata',verifyJWT,verifyAdmin, async(req,res)=>{
+  const result = await userCollection.find().sort({_id:-1}).toArray()
+  res.send(result)
+})
+
+
+app.put('/users/admin/:id', async(req,res)=>{
       const id = req.params.id;
       const filter = {_id : new ObjectId(id)}
       const options = { upsert: true };
@@ -159,7 +167,7 @@ async function run() {
   }) 
   
   app.get('/classes/admindata',verifyJWT,verifyAdmin, async(req,res)=>{
-     const result =await classesCollection.find().toArray()
+     const result =await classesCollection.find().sort({_id:-1}).toArray()
      res.send(result)
   })
 
@@ -189,9 +197,34 @@ app.put('/classes/adminmodal/:id',verifyJWT,verifyAdmin, async(req,res)=>{
     }
     const result = await classesCollection.updateOne(query, doc, options)
     res.send(result)
+}) 
+
+app.put('/users/makeadmin/:id', verifyJWT,verifyAdmin, async(req,res)=>{
+      const id =req.params.id;
+      const filter = {_id : new ObjectId(id)}
+      const options = { upsert: true };
+      const UpdateDoc = {
+          $set:{
+              role:"admin"
+          }
+      }
+      const result = await userCollection.updateOne(filter, UpdateDoc, options)
+      res.send(result)
 })
 
-app
+app.put('/users/makeainstructor/:id',verifyJWT,verifyAdmin, async(req,res)=>{
+  const id =req.params.id;
+  const filter = {_id : new ObjectId(id)}
+  const options = { upsert: true };
+  const UpdateDoc = {
+      $set:{
+          role:"admin"
+      }
+  }
+  const result = await userCollection.updateOne(filter, UpdateDoc, options)
+  res.send(result)
+})
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
