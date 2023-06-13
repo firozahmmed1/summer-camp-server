@@ -99,11 +99,27 @@ async function run() {
         const result = await userCollection.insertOne(body)
         res.send(result)
     })
+
+    app.get('/users/student/:email', verifyJWT,verifyStudent, async(req,res)=>{
+        const email=req.params.email;
+        const query ={email:email};
+        const user = await userCollection.findOne(query);
+        const result = {student:user?.role==='student'}
+        res.send(result)
+
+    })
     
     app.get('/users', verifyJWT, verifyStudent,async(req,res)=>{
         const result = await userCollection.find().toArray();
         res.send(result)
     })
+
+    app.get('/classes/allclasses', async(req,res)=>{
+      const query ={status:'approved'}
+      const result = await classesCollection.find(query).toArray()
+      res.send(result)
+    })
+  
 //-------------------insttructor
     app.put('/users/:id', async(req,res)=>{
         const id = req.params.id;
@@ -132,7 +148,8 @@ async function run() {
     })
     
     app.get('/users/inslimit', async(req,res)=>{
-      const result = await userCollection.find().toArray()
+      const query = {role:'instructor'}
+      const result = await userCollection.find(query).limit(6).toArray()
       res.send(result)
     })
 
@@ -181,10 +198,12 @@ app.put('/users/admin/:id', async(req,res)=>{
      res.send(result)
   })
 
-  app.put('/classes/updatedata/:id',verifyJWT,verifyAdmin, async(req, res)=>{
+  app.put('/classes/updatedata/:id', async(req, res)=>{
       const id = req.params.id;
+      console.log(id)
       const query = {_id :new ObjectId(id)} 
       const user= req.body;
+      console.log(user)
       const options = { upsert: true };
       const doc={
         $set:{
