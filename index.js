@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
+const stripe = require("stripe")(process.env.PAYMENT_SECRECT_KEY)
 const port = process.env.PORT || 5000;
 
 
@@ -44,6 +45,9 @@ async function run() {
     // await client.connect();
     const userCollection=client.db('artsCraft').collection('users');
     const classesCollection=client.db('artsCraft').collection('classes');
+    const bookingCollection=client.db('artsCraft').collection('booking');
+    const enrolledCollection=client.db('artsCraft').collection('enrolled');
+    const PaymentCollection=client.db('artsCraft').collection('payment');
    
    
    
@@ -58,7 +62,7 @@ async function run() {
         const email = req.decoded.email;
         const query={email:email}
         const user = await userCollection.findOne(query)
-        if(user.role !== "student"){
+        if(user?.role !== "student"){
           return res.status(403).send({ error: true, message: 'Invalid User' });
         }
         next();
@@ -88,6 +92,7 @@ async function run() {
     }
     
     
+
     // ----------------------Student-----------------------------
     app.post('/users', async(req, res)=>{
         const body = req.body;
@@ -98,9 +103,42 @@ async function run() {
         }
         const result = await userCollection.insertOne(body)
         res.send(result)
-    })
+    }) 
 
-    app.get('/users/student/:email', verifyJWT,verifyStudent, async(req,res)=>{
+   app.post('/booking', async(req,res)=>{ 
+       const  newuser = req.body;
+       const result = await bookingCollection.insertOne(newuser);
+       res.send(result)
+       
+   })  
+
+   app.post('/create-payment-intent', verifyJWT, async(req,res)=>{
+       const {price}= req.body;
+       const amount = parseFloat(price*100);
+       const  paymentIntent = await stripe.paymentIntents.create({
+             amount: amount,
+             currency:'usd',
+             payment_method_types: ["card"]
+       });
+       res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+   })
+   
+   app.get('/booking', verifyJWT,verifyStudent, async(req,res)=>{
+      const query ={email:req.query.email}
+       const result = await bookingCollection.find(query).toArray()
+       res.send(result)
+   }) 
+   app.delete('/booking/:id', async(req,res)=>{
+       const id = req.params.id;
+       const query ={_id: new ObjectId(id)}
+       const result = await bookingCollection.deleteOne(query)
+       res.send(result)
+   })
+
+
+    app.get('/users/student/:email', verifyJWT, async(req,res)=>{
         const email=req.params.email;
         const query ={email:email};
         const user = await userCollection.findOne(query);
@@ -109,7 +147,7 @@ async function run() {
 
     })
     
-    app.get('/users', verifyJWT, verifyStudent,async(req,res)=>{
+    app.get('/users', verifyJWT,verifyStudent, async(req,res)=>{
         const result = await userCollection.find().toArray();
         res.send(result)
     })
@@ -118,8 +156,41 @@ async function run() {
       const query ={status:'approved'}
       const result = await classesCollection.find(query).toArray()
       res.send(result)
-    })
+    }) 
+
+    app.get('/classes/popularclasses', async(req,res)=>{
+      const result = await classesCollection.find().limit(6).sort({_id:-1}).toArray()
+      res.send(result)
+    }) 
+
+
+  app.get('/payment', async(req,res)=>{
+    const result = await PaymentCollection.find().sort({_id:-1}).toArray()
+    res.send(result)
+  })
   
+  app.get('/booking/newuser', async(req,res)=>{
+      const paymentuser = await PaymentCollection.find().toArray();
+      const id = paymentuser.map(obj => obj.payment.courseId);
+      const userResult =await bookingCollection.find({ _id: { $in: id } }).toArray((err, result) => {
+        if (err) {
+          console.error('Error querying data:', err);
+          res.sendStatus(500);
+          return;
+        }
+    
+        res.json(result);
+      }); 
+     res.send(userResult)
+      
+  })
+
+  app.post('/payment', async(req,res)=>{
+      const user = req.body;
+      const result = await PaymentCollection.insertOne(user)
+      res.send(result)
+  })
+
 //-------------------insttructor
     app.put('/users/:id', async(req,res)=>{
         const id = req.params.id;
@@ -253,6 +324,8 @@ app.put('/users/makeainstructor/:id',verifyJWT,verifyAdmin, async(req,res)=>{
   const result = await userCollection.updateOne(filter, UpdateDoc, options)
   res.send(result)
 })
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
